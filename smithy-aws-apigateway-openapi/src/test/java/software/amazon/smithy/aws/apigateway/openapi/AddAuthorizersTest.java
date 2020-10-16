@@ -33,6 +33,7 @@ import software.amazon.smithy.openapi.OpenApiConfig;
 import software.amazon.smithy.openapi.fromsmithy.OpenApiConverter;
 import software.amazon.smithy.openapi.model.OpenApi;
 import software.amazon.smithy.openapi.model.SecurityScheme;
+import software.amazon.smithy.utils.IoUtils;
 import software.amazon.smithy.utils.ListUtils;
 import software.amazon.smithy.utils.MapUtils;
 
@@ -132,6 +133,25 @@ public class AddAuthorizersTest {
         assertThat(apiKey.getIn().get(), equalTo("header"));
         assertFalse(apiKey.getExtension("x-amazon-apigateway-authtype").isPresent());
         assertFalse(apiKey.getExtension("x-amazon-apigateway-authorizer").isPresent());
+    }
+
+    @Test
+    public void addsOperationLevelApiKeyScheme() {
+        Model model = Model.assembler()
+                .discoverModels(getClass().getClassLoader())
+                .addImport(getClass().getResource("operation-http-api-key-security.json"))
+                .assemble()
+                .unwrap();
+        OpenApiConfig config = new OpenApiConfig();
+        config.setService(ShapeId.from("smithy.example#Service"));
+        OpenApi result = OpenApiConverter.create()
+                .config(config)
+                .classLoader(getClass().getClassLoader())
+                .convert(model);
+        Node expectedNode = Node.parse(IoUtils.toUtf8String(
+                getClass().getResourceAsStream("operation-http-api-key-security.openapi.json")));
+
+        Node.assertEquals(result, expectedNode);
     }
 
     @Test
